@@ -25,5 +25,8 @@
   "bugs": {
     "url": "https://github.com/nerdgrass/ucdb/issues"
   },
-  "homepage": "https://github.com/nerdgrass/ucdb#readme"
+  "homepage": "https://github.com/nerdgrass/ucdb#readme",
+  "dependencies": {
+    "graphql": "^0.6.2"
+  }
 }
