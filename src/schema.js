@@ -1,51 +1,153 @@
+// Dependencies
 var graphql = require ('graphql');
 
-// Here is some dummy data to make this piece of code simpler.
-// It will be changeable after introducing mutation.
-var TODOs = [
-    {
-        "id": 1446412739542,
-        "title": "Read emails",
-        "completed": false
+// GraphQL types
+var GraphQLObjectType = graphql.GraphQLObjectType;
+var GraphQLInt = graphql.GraphQLInt;
+var GraphQLBoolean = graphql.GraphQLBoolean;
+var GraphQLString = graphql.GraphQLString;
+var GraphQLList = graphql.GraphQLList;
+var GraphQLNonNull = graphql.GraphQLNonNull;
+var GraphQLSchema = graphql.GraphQLSchema;
+
+// lol, the database
+var TODOs = [];
+
+var TodoType = new GraphQLObjectType({
+  name: 'todo',
+  fields: () => ({
+    id: {
+      type: GraphQLInt,
+      description: 'Todo id'
     },
-    {
-        "id": 1446412740883,
-        "title": "Buy orange",
-        "completed": true
+    title: {
+      type: GraphQLString,
+      description: 'Task title'
+    },
+    completed: {
+      type: GraphQLBoolean,
+      description: 'Flag to mark if the task is completed'
     }
-];
-
-var TodoType = new graphql.GraphQLObjectType({
-    name: 'todo',
-    fields: function () {
-        return {
-            id: {
-                type: graphql.GraphQLInt
-            },
-            title: {
-                type: graphql.GraphQLString
-            },
-            completed: {
-                type: graphql.GraphQLBoolean
-            }
-        }
-    }
+  })
 });
 
-var queryType = new graphql.GraphQLObjectType({
-    name: 'Query',
-    fields: function () {
-        return {
-            todos: {
-                type: new graphql.GraphQLList(TodoType),
-                resolve: function () {
-                    return TODOs;
-                }
-            }
-        }
+var QueryType = new GraphQLObjectType({
+  name: 'Query',
+  fields: () => ({
+    todos: {
+      type: new GraphQLList(TodoType),
+      resolve: () => TODOs
     }
+  })
 });
 
-module.exports = new graphql.GraphQLSchema({
-    query: queryType
+var MutationAdd = {
+  type: new GraphQLList(TodoType),
+  description: 'Add a Todo',
+  args: {
+    title: {
+      name: 'Todo title',
+      type: new GraphQLNonNull(GraphQLString)
+    }
+  },
+  resolve: (root, args) => {
+    TODOs.push({
+      id: (new Date()).getTime(),
+      title: args.title,
+      completed: false
+    });
+    return TODOs;
+  }
+};
+
+var MutationToggle = {
+  type: new GraphQLList(TodoType),
+  description: 'Toggle the todo',
+  args: {
+    id: {
+      name: 'Todo Id',
+      type: new GraphQLNonNull(GraphQLInt)
+    }
+  },
+  resolve: (root, args) => {
+    TODOs
+      .filter((todo) => todo.id === args.id)
+      .forEach((todo) => todo.completed = !todo.completed)
+    return TODOs;
+  }
+};
+
+var MutationDestroy = {
+  type: new GraphQLList(TodoType),
+  description: 'Destroy the todo',
+  args: {
+    id: {
+      name: 'Todo Id',
+      type: new GraphQLNonNull(GraphQLInt)
+    }
+  },
+  resolve: (root, args) => {
+    return TODOs = TODOs.filter((todo) => todo.id !== args.id);
+  }
+};
+
+var MutationToggleAll = {
+  type: new GraphQLList(TodoType),
+  description: 'Toggle all todos',
+  args: {
+    checked: {
+      name: 'Todo Id',
+      type: new GraphQLNonNull(GraphQLBoolean)
+    }
+  },
+  resolve: (root, args) => {
+    TODOs.forEach((todo) => todo.completed = args.checked)
+    return TODOs;
+  }
+};
+
+var MutationClearCompleted = {
+  type: new GraphQLList(TodoType),
+  description: 'Clear completed',
+  resolve: () => {
+    return TODOs = TODOs.filter((todo) => !todo.completed)
+  }
+};
+
+var MutationSave = {
+  type: new GraphQLList(TodoType),
+  description: 'Edit a todo',
+  args: {
+    id: {
+      name: 'Todo Id',
+      type: new GraphQLNonNull(GraphQLInt)
+    },
+    title: {
+      name: 'Todo title',
+      type: new GraphQLNonNull(GraphQLString)
+    }
+  },
+  resolve: (root, args) => {
+    TODOs
+      .filter((todo) => todo.id === args.id)
+      .forEach((todo) => todo.title = args.title)
+    return TODOs
+  }
+}
+
+var MutationType = new GraphQLObjectType({
+  name: 'Mutation',
+  fields: {
+    add: MutationAdd,
+    toggle: MutationToggle,
+    toggleAll: MutationToggleAll,
+    destroy: MutationDestroy,
+    clearCompleted: MutationClearCompleted,
+    save: MutationSave
+  }
+});
+
+module.exports = new GraphQLSchema({
+  query: QueryType,
+  mutation: MutationType
 });
